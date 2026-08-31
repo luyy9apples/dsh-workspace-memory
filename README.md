@@ -43,6 +43,7 @@ dsh plugin --profile web remove dsh-workspace-memory
 - **No silent inferred writes** — when the model identifies durable feedback, it shows a focused diff and asks before writing.
 - **Fresh on every step** — both files are reread before each accepted model step, so existing conversations observe later edits.
 - **Conflict-aware** — a proposal based on an older file version cannot overwrite a newer edit from another conversation.
+- **Sandbox-aware** — writes use the calling session's workspace policy and cwd, not the directory where the DSH server was started.
 - **Local and inspectable** — no network requests, telemetry, database, or hidden memory store.
 
 ## Try both kinds of shared context
@@ -139,6 +140,8 @@ The filenames must be distinct, same-directory names without path separators. `m
 | Storage scope | Only the two configured files in the exact session cwd |
 | Model-inferred changes | Require interactive confirmation |
 | Concurrent changes | Stale whole-file replacements are rejected |
+| Sandbox boundary | The calling session's policy and cwd are enforced; read-only remains read-only |
+| Failed or declined proposal | The agent is instructed not to bypass `workspace_memory` with another write tool |
 | Symbolic links | Rejected at the final path component |
 | Network and telemetry | None |
 | Database and embeddings | None |

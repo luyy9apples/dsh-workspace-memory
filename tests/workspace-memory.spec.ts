@@ -5,9 +5,11 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { AgentRegistry, agentEvents, Inbox, type Agent } from '@deepseek-ai/dsh-agent'
 import LocalFileSystem from '@deepseek-ai/dsh-fs-local'
+import SandboxedFileSystem from '@deepseek-ai/dsh-fs-sandbox'
 import { CallId, createUserMessage } from '@deepseek-ai/dsh-llm'
 import { Session, SessionId, SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
+import SandboxPolicyService from '@deepseek-ai/dsh-sandbox-policy'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
 import UserQuestionService, { type AskUserQuestionRequest } from '@deepseek-ai/dsh-user-questions'
 import * as workspaceMemory from '../src/index.ts'
@@ -112,15 +114,27 @@ describe('workspace memory injection', () => {
   })
 })
 
-async function proposalHarness(answer: 'Apply' | 'Keep current') {
-  const root = await mkdtemp(join(tmpdir(), 'dsh-workspace-memory-'))
+async function proposalHarness(
+  answer: 'Apply' | 'Keep current',
+  options: { sandboxed?: boolean } = {},
+) {
+  const parent = options.sandboxed ? process.cwd() : tmpdir()
+  const root = await mkdtemp(join(parent, '.dsh-workspace-memory-'))
   roots.push(root)
   await writeFile(join(root, 'AGENTS.md'), 'existing rule\n', 'utf8')
   const ctx = new Context()
   await ctx.plugin(AgentRegistry)
   await ctx.plugin(SystemPrompt)
   await ctx.plugin(ToolRuntime)
-  await ctx.plugin(LocalFileSystem, { cwd: root })
+  if (options.sandboxed) {
+    const fallback = await mkdtemp(join(process.cwd(), '.dsh-workspace-memory-fallback-'))
+    roots.push(fallback)
+    await ctx.plugin(SandboxPolicyService, { mode: 'workspace-write', workspaceRoot: fallback })
+    await ctx.plugin(SandboxedFileSystem, { cwd: fallback })
+  } else {
+    await ctx.plugin(SandboxPolicyService, { mode: 'workspace-write', workspaceRoot: root })
+    await ctx.plugin(LocalFileSystem, { cwd: root })
+  }
   await ctx.plugin(UserQuestionService)
   const seen: AskUserQuestionRequest[] = []
   ctx.userQuestions.registerProvider({
@@ -205,5 +219,25 @@ describe('confirmed workspace curation', () => {
     expect(result.isError).toBe(true)
     expect(test.seen).toHaveLength(0)
     expect(result.content[0]?.type === 'text' && result.content[0].text).toContain('already recorded')
+  })
+
+  it('uses the session workspace root when the filesystem sandbox fallback points elsewhere', async () => {
+    const test = await proposalHarness('Apply', { sandboxed: true })
+    const result = await test.ctx.tools.execute({
+      signal: new AbortController().signal,
+      callId: CallId('sandboxed-memory'),
+      name: 'workspace_memory',
+      arguments: {
+        action: 'propose',
+        kind: 'memory',
+        reason: 'Keep this stable project decision across sessions.',
+        content: '- Decision: preserve compatibility.\n',
+      },
+      agent: test.agent,
+    })
+
+    expect(result.isError).toBe(false)
+    expect(await readFile(join(test.root, '.dsh-memory.md'), 'utf8'))
+      .toBe('- Decision: preserve compatibility.\n')
   })
 })

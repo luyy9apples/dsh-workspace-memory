@@ -10,6 +10,7 @@ import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
 import type { FileSystem, FsInfo, FsTarget } from '@deepseek-ai/dsh-fs'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type {} from '@deepseek-ai/dsh-system-prompt'
+import type {} from '@deepseek-ai/dsh-sandbox-policy'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-user-questions'
 
@@ -17,7 +18,7 @@ import type {} from '@deepseek-ai/dsh-user-questions'
 export const name = 'workspace-memory'
 
 /** Services required by snapshot injection, curation, and the model-facing tool. */
-export const inject = ['agents', 'fs', 'systemPrompt', 'tools', 'userQuestions']
+export const inject = ['agents', 'fs', 'sandboxPolicy', 'systemPrompt', 'tools', 'userQuestions']
 
 /** Workspace files, curation behavior, and complete UTF-8 byte budget. */
 export interface Config {
@@ -72,7 +73,8 @@ export const CURATION_PROMPT = `Workspace knowledge curation:
 - Integrate the candidate into the most relevant existing section. Preserve correct unrelated content and the file's established language, headings, list style, terminology, and ordering. Create or rename a section only when it materially improves organization.
 - Make the smallest semantically complete edit: remove duplication in the affected section, reconcile a superseded statement only when the user's new feedback clearly replaces it, and keep instructions atomic and actionable. Do not append raw conversation text, attribution such as "the user said", timestamps, or proposal rationale to the file.
 - Review the resulting complete document for coherence, precision, contradictions, and redundant wording, but do not rewrite unrelated sections merely for style and do not invent project facts.
-- Then call workspace_memory with action "propose", the matching kind, the complete replacement Markdown, and a concise one-sentence reason describing the actual change. The tool itself shows a focused diff and asks the user for confirmation. Never write an inferred candidate with "replace", and do not ask for the same confirmation separately.`
+- Then call workspace_memory with action "propose", the matching kind, the complete replacement Markdown, and a concise one-sentence reason describing the actual change. The tool itself shows a focused diff and asks the user for confirmation. Never write an inferred candidate with "replace", and do not ask for the same confirmation separately.
+- workspace_memory is the only tool authorized to apply inferred shared-state updates. If its proposal is declined, denied by policy, or fails for any reason, do not fall back to write, edit, shell, or another tool to modify AGENTS.md or .dsh-memory.md. Leave the file unchanged, continue the immediate task when possible, and report the failure.`
 
 type DiffOperation = {
   readonly kind: 'context' | 'add' | 'remove'
@@ -396,6 +398,9 @@ export function apply(ctx: Context, config: Config): void {
       },
     },
     async execute(args, exec) {
+      if (exec.agent === undefined) {
+        throw new Error('workspace_memory requires an agent session with a workspace cwd')
+      }
       const cwd = workspaceCwd(exec.agent)
       const kind: WorkspaceFileKind = args.kind ?? 'memory'
       const file = fileForKind(resolved, kind)
@@ -472,6 +477,7 @@ export function apply(ctx: Context, config: Config): void {
           ? { kind: 'createIfAbsent' }
           : { kind: 'replaceIfVersion', version: state.info.version },
         exec.signal,
+        ctx.sandboxPolicy.resolve({ session: exec.agent.session }),
       )
       return {
         action: args.action,

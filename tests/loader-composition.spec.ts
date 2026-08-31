@@ -8,6 +8,7 @@ import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import AgentRegistry from '@deepseek-ai/dsh-agent'
 import LocalFileSystem from '@deepseek-ai/dsh-fs-local'
+import SandboxPolicyService from '@deepseek-ai/dsh-sandbox-policy'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
 import UserQuestionService from '@deepseek-ai/dsh-user-questions'
@@ -34,6 +35,10 @@ describe('dsh-workspace-memory real Loader composition through cordis.yml', () =
       "- name: '@deepseek-ai/dsh-system-prompt'",
       "- name: '@deepseek-ai/dsh-tools'",
       "- name: '@deepseek-ai/dsh-user-questions'",
+      "- name: '@deepseek-ai/dsh-sandbox-policy'",
+      '  config:',
+      '    mode: workspace-write',
+      `    workspaceRoot: ${JSON.stringify(root)}`,
       "- name: '@deepseek-ai/dsh-fs-local'",
       '  config:',
       `    cwd: ${JSON.stringify(root)}`,
@@ -52,6 +57,7 @@ describe('dsh-workspace-memory real Loader composition through cordis.yml', () =
       ['@deepseek-ai/dsh-system-prompt', SystemPrompt],
       ['@deepseek-ai/dsh-tools', ToolRuntime],
       ['@deepseek-ai/dsh-user-questions', UserQuestionService],
+      ['@deepseek-ai/dsh-sandbox-policy', SandboxPolicyService],
       ['@deepseek-ai/dsh-fs-local', LocalFileSystem],
       ['dsh-workspace-memory', WorkspaceMemory],
     ])

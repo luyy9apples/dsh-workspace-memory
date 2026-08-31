@@ -36,6 +36,7 @@ describe('renderWorkspaceMemory', () => {
     expect(CURATION_PROMPT).toContain('do not rewrite unrelated sections')
     expect(CURATION_PROMPT).toContain('action "propose"')
     expect(CURATION_PROMPT).toContain('shows a focused diff')
+    expect(CURATION_PROMPT).toContain('do not fall back to write, edit, shell')
   })
 
   it('renders a focused contextual diff instead of the complete document', () => {

@@ -112,7 +112,7 @@ describe('workspace memory injection', () => {
   })
 })
 
-async function proposalHarness(answer: 'Update' | 'Skip') {
+async function proposalHarness(answer: 'Apply' | 'Keep current') {
   const root = await mkdtemp(join(tmpdir(), 'dsh-workspace-memory-'))
   roots.push(root)
   await writeFile(join(root, 'AGENTS.md'), 'existing rule\n', 'utf8')
@@ -137,7 +137,7 @@ async function proposalHarness(answer: 'Update' | 'Skip') {
 
 describe('confirmed workspace curation', () => {
   it('writes an instruction proposal only after the user accepts it', async () => {
-    const test = await proposalHarness('Update')
+    const test = await proposalHarness('Apply')
     const result = await test.ctx.tools.execute({
       signal: new AbortController().signal,
       callId: CallId('accept-instruction'),
@@ -153,15 +153,22 @@ describe('confirmed workspace curation', () => {
 
     expect(result.isError).toBe(false)
     expect(test.seen[0]?.questions[0]).toMatchObject({
-      question: 'Update AGENTS.md for this workspace?',
-      header: 'Shared instruction',
+      question: 'Save this workspace instruction?',
+      header: 'AGENTS.md',
     })
+    expect(test.seen[0]?.questions[0]?.options).toEqual([
+      { label: 'Apply', description: 'Apply these changes to AGENTS.md.' },
+      { label: 'Keep current', description: 'Leave AGENTS.md unchanged.' },
+    ])
+    expect(test.seen[0]?.questions[0]?.detail).toContain('**Proposed changes**')
+    expect(test.seen[0]?.questions[0]?.detail).toContain('+new durable rule')
     expect(test.seen[0]?.questions[0]?.detail).toContain('new durable rule')
+    expect(test.seen[0]?.questions[0]?.detail).not.toContain('Complete proposed content')
     expect(await readFile(join(test.root, 'AGENTS.md'), 'utf8')).toBe('existing rule\nnew durable rule\n')
   })
 
   it('leaves memory unchanged when the user declines a proposal', async () => {
-    const test = await proposalHarness('Skip')
+    const test = await proposalHarness('Keep current')
     const result = await test.ctx.tools.execute({
       signal: new AbortController().signal,
       callId: CallId('decline-memory'),
@@ -178,5 +185,25 @@ describe('confirmed workspace curation', () => {
     expect(result.isError).toBe(false)
     await expect(readFile(join(test.root, '.dsh-memory.md'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' })
     expect(result.content[0]?.type === 'text' && result.content[0].text).toContain('declined')
+  })
+
+  it('rejects a no-op proposal without interrupting the user', async () => {
+    const test = await proposalHarness('Apply')
+    const result = await test.ctx.tools.execute({
+      signal: new AbortController().signal,
+      callId: CallId('noop-instruction'),
+      name: 'workspace_memory',
+      arguments: {
+        action: 'propose',
+        kind: 'instruction',
+        reason: 'This rule is already present.',
+        content: 'existing rule\n',
+      },
+      agent: test.agent,
+    })
+
+    expect(result.isError).toBe(true)
+    expect(test.seen).toHaveLength(0)
+    expect(result.content[0]?.type === 'text' && result.content[0].text).toContain('already recorded')
   })
 })

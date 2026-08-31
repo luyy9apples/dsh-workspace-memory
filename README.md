@@ -40,7 +40,7 @@ dsh plugin --profile web remove dsh-workspace-memory
 
 - **Cross-session context** — a new conversation sees the same workspace rules and decisions as existing conversations.
 - **Instructions and knowledge stay separate** — behavioral rules go to `AGENTS.md`; project knowledge goes to `.dsh-memory.md`.
-- **No silent inferred writes** — when the model identifies durable feedback, it must show the complete proposal and ask before writing.
+- **No silent inferred writes** — when the model identifies durable feedback, it shows a focused diff and asks before writing.
 - **Fresh on every step** — both files are reread before each accepted model step, so existing conversations observe later edits.
 - **Conflict-aware** — a proposal based on an older file version cannot overwrite a newer edit from another conversation.
 - **Local and inspectable** — no network requests, telemetry, database, or hidden memory store.
@@ -57,7 +57,7 @@ Say:
 
 This describes **how the agent should work**, so the agent should propose an update to `AGENTS.md`.
 
-DSH shows the complete proposed file and its reason. Choose **Update** to save it or **Skip** to leave the file unchanged.
+DSH shows a concise reason and a focused diff instead of repeating the complete file. Choose **Apply** to save it or **Keep current** to leave the file unchanged.
 
 ### 2. Save project memory
 
@@ -104,7 +104,7 @@ candidate -> complete-file merge -> user confirmation -> version-guarded write
 
 Before every accepted model step, the plugin injects one current snapshot of the two files. Unchanged visible content is not appended repeatedly; empty and deleted files are represented explicitly so stale content is superseded.
 
-The model decides whether feedback appears durable and which file it belongs in. The `workspace_memory` tool enforces the write boundary: inferred feedback must use `propose`, and a proposal is written only after the user selects **Update**. The observed file version must still match at write time.
+The model decides whether feedback appears durable and which file it belongs in. Before proposing, it is instructed to review the complete Markdown document, integrate the smallest coherent edit into the relevant section, remove affected-section duplication, and preserve unrelated content and structure. The `workspace_memory` tool enforces the write boundary: inferred feedback must use `propose`, and a proposal is written only after the user selects **Apply**. The observed file version must still match at write time.
 
 This mechanism improves continuity; it does not guarantee that a model will always classify, remember, or follow every instruction correctly.
 

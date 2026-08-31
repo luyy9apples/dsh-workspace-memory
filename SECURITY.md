@@ -10,7 +10,7 @@ The final path component must not be a symbolic link. Files must be regular UTF-
 
 `AGENTS.md` is workspace-authored instruction content. `.dsh-memory.md` is labeled as project context without instruction authority. Repository text is escaped so it cannot close the plugin-owned reminder wrapper.
 
-Classification of feedback is model-based and can miss or misclassify a candidate. An inferred candidate is never written directly: the `propose` operation displays its reason and complete replacement and writes only when the user selects **Update**. This confirmation protects mutation, but cannot guarantee that a model will obey every recorded instruction.
+Classification of feedback is model-based and can miss or misclassify a candidate. An inferred candidate is never written directly: the `propose` operation displays a bounded contextual diff and concise reason, while retaining the complete replacement internally, and writes only when the user selects **Apply**. This confirmation protects mutation, but cannot guarantee that a model will obey every recorded instruction.
 
 ## Reporting a vulnerability
 

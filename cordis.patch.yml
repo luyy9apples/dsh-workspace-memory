@@ -1,0 +1,10 @@
+# Install one conservative workspace-memory instance into the selected profile.
+# A user's later profile or home patch may replace this complete config row.
+- insert:
+    - id: workspace-memory
+      name: dsh-workspace-memory
+      config:
+        memoryFile: .dsh-memory.md
+        instructionFile: AGENTS.md
+        suggestUpdates: true
+        maxBytes: 32768

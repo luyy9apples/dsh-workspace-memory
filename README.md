@@ -45,21 +45,48 @@ dsh plugin --profile web remove dsh-workspace-memory
 - **Conflict-aware** — a proposal based on an older file version cannot overwrite a newer edit from another conversation.
 - **Local and inspectable** — no network requests, telemetry, database, or hidden memory store.
 
-## Try it in one minute
+## Try both kinds of shared context
 
-Open a DSH conversation in the workspace you want to share, then say:
+Open a DSH conversation in the workspace you want to share.
 
-> In this workspace, always mark newly written thesis text with `\gpt{}`. Apply this rule to future conversations too.
+### 1. Save a workspace instruction
 
-The agent should propose a complete update to `AGENTS.md`. DSH shows the reason and proposed content; choose **Update** to write it or **Skip** to leave the file unchanged.
+Say:
 
-Now give it a stable project decision:
+> Whenever you change files in this workspace, finish by summarizing what changed and what you verified. Apply this rule to future conversations too.
 
-> Our paper defines calibrated confidence as the mapping from link-prediction scores to evidence reliability. Preserve this decision for future conversations.
+This describes **how the agent should work**, so the agent should propose an update to `AGENTS.md`.
 
-This should produce a proposal for `.dsh-memory.md`. A one-off request such as “shorten the second sentence” should not be stored.
+DSH shows the complete proposed file and its reason. Choose **Update** to save it or **Skip** to leave the file unchanged.
 
-Finally, open another conversation at the exact same workspace directory and ask it to summarize the workspace rules and decisions.
+### 2. Save project memory
+
+Next, provide a stable fact or decision about the project:
+
+> This project prioritizes backward compatibility over adopting new APIs. Preserve this decision for future conversations.
+
+This describes **what the agent should know about the project**, rather than a rule for how it should work, so the agent should propose an update to `.dsh-memory.md`.
+
+### 3. Verify it in another conversation
+
+Open another conversation at the exact same workspace directory and ask:
+
+> What instructions should you follow here, and what project decisions should you keep in mind?
+
+The new conversation should distinguish between:
+
+- the working rule loaded from `AGENTS.md`; and
+- the project decision loaded from `.dsh-memory.md`.
+
+A useful rule of thumb is:
+
+| Question | Destination |
+|---|---|
+| How should the agent behave across tasks? | `AGENTS.md` |
+| What stable fact, decision, term, or constraint should the agent know? | `.dsh-memory.md` |
+| Is this needed only for the current request? | Do not store it |
+
+For example, “run the relevant tests after changing code” is an instruction. “The project supports Node.js 22 and 24” is project memory. “Fix the currently failing test” is a one-off request and should not be stored.
 
 ## How it works
 

@@ -17,9 +17,19 @@ English | [简体中文](README.zh-CN.md)
 
 Both are ordinary Markdown files in the workspace root. They remain readable, reviewable, and versionable without a database, embeddings, or a cloud service.
 
-## One-minute demo
+## See it in one minute
+
+The demo follows the complete workflow: save a reusable working rule to `AGENTS.md`, record a stable project decision in `.dsh-memory.md`, then open another conversation in the same workspace and verify that it receives both. Every inferred update is shown as a focused diff and written only after approval.
 
 ![Workspace instructions and memory shared across DSH conversations](docs/assets/workspace-memory-demo.gif)
+
+Try the same flow after installing:
+
+1. **Workspace instruction:** “Whenever you change files here, finish by summarizing what changed and what you verified. Apply this rule to future conversations too.”
+2. **Project memory:** “This project prioritizes backward compatibility over adopting new APIs. Preserve this decision for future conversations.”
+3. **New conversation:** “What instructions should you follow here, and what project decisions should you keep in mind?”
+
+Rules the agent should repeatedly follow belong in `AGENTS.md`; stable facts and decisions it should remember belong in `.dsh-memory.md`. One-off requests are not stored.
 
 ## Install
 
@@ -50,49 +60,6 @@ dsh plugin --profile web remove dsh-workspace-memory
 - **Conflict-aware** — a proposal based on an older file version cannot overwrite a newer edit from another conversation.
 - **Sandbox-aware** — writes use the calling session's workspace policy and cwd, not the directory where the DSH server was started.
 - **Local and inspectable** — no network requests, telemetry, database, or hidden memory store.
-
-## Try both kinds of shared context
-
-Open a DSH conversation in the workspace you want to share.
-
-### 1. Save a workspace instruction
-
-Say:
-
-> Whenever you change files in this workspace, finish by summarizing what changed and what you verified. Apply this rule to future conversations too.
-
-This describes **how the agent should work**, so the agent should propose an update to `AGENTS.md`.
-
-DSH Web opens a focused review card with the target file, concise reason, line numbers, colored additions and removals, and collapsed unchanged sections. Choose **Apply changes** to save it or **Keep current** to leave the file unchanged. Clients without the browser companion receive the same decision as a compact Markdown diff.
-
-### 2. Save project memory
-
-Next, provide a stable fact or decision about the project:
-
-> This project prioritizes backward compatibility over adopting new APIs. Preserve this decision for future conversations.
-
-This describes **what the agent should know about the project**, rather than a rule for how it should work, so the agent should propose an update to `.dsh-memory.md`.
-
-### 3. Verify it in another conversation
-
-Open another conversation at the exact same workspace directory and ask:
-
-> What instructions should you follow here, and what project decisions should you keep in mind?
-
-The new conversation should distinguish between:
-
-- the working rule loaded from `AGENTS.md`; and
-- the project decision loaded from `.dsh-memory.md`.
-
-A useful rule of thumb is:
-
-| Question | Destination |
-|---|---|
-| How should the agent behave across tasks? | `AGENTS.md` |
-| What stable fact, decision, term, or constraint should the agent know? | `.dsh-memory.md` |
-| Is this needed only for the current request? | Do not store it |
-
-For example, “run the relevant tests after changing code” is an instruction. “The project supports Node.js 22 and 24” is project memory. “Fix the currently failing test” is a one-off request and should not be stored.
 
 ## How it works
 

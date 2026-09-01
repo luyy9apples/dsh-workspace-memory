@@ -21,7 +21,7 @@
 
 演示展示了一套完整流程：把需要长期遵守的工作约定保存到 `AGENTS.md`，把稳定的项目决策记录到 `.dsh-memory.md`，随后在同一工作区打开新会话，验证它能够同时读取两类内容。模型推断出的更新都会先以精简 diff 展示，只有用户确认后才会写入。
 
-![在多个 DSH 会话间共享工作区指令与记忆](docs/assets/workspace-memory-demo.gif)
+![在多个 DSH 会话间共享工作区指令与记忆](https://raw.githubusercontent.com/luyy9apples/dsh-workspace-memory/main/docs/assets/workspace-memory-demo.gif)
 
 安装后可以用下面三句话复现：
 

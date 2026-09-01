@@ -21,7 +21,7 @@ Both are ordinary Markdown files in the workspace root. They remain readable, re
 
 The demo follows the complete workflow: save a reusable working rule to `AGENTS.md`, record a stable project decision in `.dsh-memory.md`, then open another conversation in the same workspace and verify that it receives both. Every inferred update is shown as a focused diff and written only after approval.
 
-![Workspace instructions and memory shared across DSH conversations](docs/assets/workspace-memory-demo.gif)
+![Workspace instructions and memory shared across DSH conversations](https://raw.githubusercontent.com/luyy9apples/dsh-workspace-memory/main/docs/assets/workspace-memory-demo.gif)
 
 Try the same flow after installing:
 

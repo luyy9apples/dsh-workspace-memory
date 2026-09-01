@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
+  createWorkspaceReview,
   CURATION_PROMPT,
   renderProposalDetail,
   renderProposalDiff,
   renderWorkspaceMemory,
   renderWorkspaceState,
 } from '../src/index.ts'
+import { decodeWorkspaceReview, encodeWorkspaceReview } from '../src/review.ts'
 
 describe('renderWorkspaceMemory', () => {
   it('renders a complete empty snapshot', () => {
@@ -61,5 +63,30 @@ describe('renderWorkspaceMemory', () => {
     expect(detail).toContain('+- Run tests.')
     expect(detail).toContain('…')
     expect(detail).not.toContain('Complete proposed content')
+  })
+
+  it('round-trips a structured, line-numbered review for the Web panel', () => {
+    const review = createWorkspaceReview(
+      'instruction',
+      'AGENTS.md',
+      '  补充长期适用的格式规则。  ',
+      '# 规则\n\n- 保留原文。\n',
+      '# 规则\n\n- 保留原文。\n- 命令使用代码格式。\n',
+    )
+
+    expect(review).toMatchObject({
+      version: 1,
+      kind: 'instruction',
+      file: 'AGENTS.md',
+      reason: '补充长期适用的格式规则。',
+      truncated: false,
+    })
+    expect(review.rows).toContainEqual({
+      kind: 'add',
+      text: '- 命令使用代码格式。',
+      newLine: 4,
+    })
+    expect(decodeWorkspaceReview(`${encodeWorkspaceReview(review)}\n\nfallback`)).toEqual(review)
+    expect(decodeWorkspaceReview('ordinary Markdown')).toBeUndefined()
   })
 })

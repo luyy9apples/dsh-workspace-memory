@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+- Add a dedicated DSH Web review card with line numbers, colored additions and removals, collapsed unchanged sections, and fixed decision actions.
+- Ship the browser companion in the same npm Bundle without requiring a DSH Web rebuild.
+- Preserve the compact Markdown diff as a fallback for clients that do not load the browser companion.
+
 ## 0.1.0 — 2026-08-31
 
 - Share cwd-level `AGENTS.md` instructions and `.dsh-memory.md` context across sessions.

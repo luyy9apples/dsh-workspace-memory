@@ -13,6 +13,11 @@ import type {} from '@deepseek-ai/dsh-system-prompt'
 import type {} from '@deepseek-ai/dsh-sandbox-policy'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-user-questions'
+import {
+  encodeWorkspaceReview,
+  type ReviewRow,
+  type WorkspaceReview,
+} from './review.ts'
 
 /** Cordis plugin name and durable message-source owner. */
 export const name = 'workspace-memory'
@@ -173,6 +178,78 @@ export function renderProposalDiff(previous: string, proposed: string): string {
   }
   if (truncated) text += '\n… preview truncated …'
   return text
+}
+
+/** Build the bounded, line-numbered data consumed by the optional Web review panel. */
+export function createWorkspaceReview(
+  kind: WorkspaceFileKind,
+  file: string,
+  reason: string,
+  previous: string,
+  proposed: string,
+): WorkspaceReview {
+  const operations = lineDiff(previous, proposed)
+  const keep = new Uint8Array(operations.length)
+  for (let index = 0; index < operations.length; index += 1) {
+    if (operations[index]?.kind === 'context') continue
+    keep.fill(1, Math.max(0, index - DIFF_CONTEXT_LINES), Math.min(operations.length, index + DIFF_CONTEXT_LINES + 1))
+  }
+
+  const rows: ReviewRow[] = []
+  let oldLine = 1
+  let newLine = 1
+  let index = 0
+  let characters = 0
+  let truncated = false
+  while (index < operations.length) {
+    if (rows.length >= MAX_DIFF_PREVIEW_LINES || characters >= MAX_DIFF_PREVIEW_CHARS) {
+      truncated = true
+      break
+    }
+    if (keep[index] === 0) {
+      const start = index
+      while (index < operations.length && keep[index] === 0) {
+        oldLine += 1
+        newLine += 1
+        index += 1
+      }
+      rows.push({ kind: 'omitted', count: index - start })
+      continue
+    }
+    const operation = operations[index]!
+    const remainingCharacters = MAX_DIFF_PREVIEW_CHARS - characters
+    const visibleLine = operation.line.length > remainingCharacters
+      ? `${operation.line.slice(0, Math.max(0, remainingCharacters - 1))}…`
+      : operation.line
+    characters += visibleLine.length
+    if (operation.kind === 'context') {
+      rows.push({ kind: 'context', text: visibleLine, oldLine, newLine })
+      oldLine += 1
+      newLine += 1
+    } else if (operation.kind === 'remove') {
+      rows.push({ kind: 'remove', text: visibleLine, oldLine })
+      oldLine += 1
+    } else {
+      rows.push({ kind: 'add', text: visibleLine, newLine })
+      newLine += 1
+    }
+    index += 1
+    if (visibleLine !== operation.line) {
+      truncated = true
+      break
+    }
+  }
+  const normalizedReason = reason.trim().replace(/\s+/g, ' ')
+  return {
+    version: 1,
+    kind,
+    file,
+    reason: normalizedReason.length > MAX_REASON_PREVIEW_CHARS
+      ? `${normalizedReason.slice(0, MAX_REASON_PREVIEW_CHARS)}…`
+      : normalizedReason,
+    rows,
+    truncated,
+  }
 }
 
 /** Keep the confirmation detail focused even when model-authored rationale is verbose. */
@@ -446,7 +523,7 @@ export function apply(ctx: Context, config: Config): void {
             question: kind === 'instruction'
               ? 'Save this workspace instruction?'
               : 'Save this project memory?',
-            detail: renderProposalDetail(args.reason, previous, args.content),
+            detail: `${encodeWorkspaceReview(createWorkspaceReview(kind, file, args.reason, previous, args.content))}\n\n${renderProposalDetail(args.reason, previous, args.content)}`,
             options: [
               { label: 'Apply', description: `Apply these changes to ${file}.` },
               { label: 'Keep current', description: `Leave ${file} unchanged.` },

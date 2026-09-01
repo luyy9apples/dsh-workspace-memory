@@ -17,6 +17,10 @@ English | [简体中文](README.zh-CN.md)
 
 Both are ordinary Markdown files in the workspace root. They remain readable, reviewable, and versionable without a database, embeddings, or a cloud service.
 
+## One-minute demo
+
+![Workspace instructions and memory shared across DSH conversations](docs/assets/workspace-memory-demo.gif)
+
 ## Install
 
 Requires DeepSeek Harness `0.1.1-rc.2` and Node.js `^22.19.0 || >=24.0.0`.
@@ -41,6 +45,7 @@ dsh plugin --profile web remove dsh-workspace-memory
 - **Cross-session context** — a new conversation sees the same workspace rules and decisions as existing conversations.
 - **Instructions and knowledge stay separate** — behavioral rules go to `AGENTS.md`; project knowledge goes to `.dsh-memory.md`.
 - **No silent inferred writes** — when the model identifies durable feedback, it shows a focused diff and asks before writing.
+- **Purpose-built Web review** — DSH Web shows line numbers, colored additions and removals, and collapsed unchanged sections; other clients retain a Markdown fallback.
 - **Fresh on every step** — both files are reread before each accepted model step, so existing conversations observe later edits.
 - **Conflict-aware** — a proposal based on an older file version cannot overwrite a newer edit from another conversation.
 - **Sandbox-aware** — writes use the calling session's workspace policy and cwd, not the directory where the DSH server was started.
@@ -58,7 +63,7 @@ Say:
 
 This describes **how the agent should work**, so the agent should propose an update to `AGENTS.md`.
 
-DSH shows a concise reason and a focused diff instead of repeating the complete file. Choose **Apply** to save it or **Keep current** to leave the file unchanged.
+DSH Web opens a focused review card with the target file, concise reason, line numbers, colored additions and removals, and collapsed unchanged sections. Choose **Apply changes** to save it or **Keep current** to leave the file unchanged. Clients without the browser companion receive the same decision as a compact Markdown diff.
 
 ### 2. Save project memory
 
@@ -105,7 +110,9 @@ candidate -> complete-file merge -> user confirmation -> version-guarded write
 
 Before every accepted model step, the plugin injects one current snapshot of the two files. Unchanged visible content is not appended repeatedly; empty and deleted files are represented explicitly so stale content is superseded.
 
-The model decides whether feedback appears durable and which file it belongs in. Before proposing, it is instructed to review the complete Markdown document, integrate the smallest coherent edit into the relevant section, remove affected-section duplication, and preserve unrelated content and structure. The `workspace_memory` tool enforces the write boundary: inferred feedback must use `propose`, and a proposal is written only after the user selects **Apply**. The observed file version must still match at write time.
+The model decides whether feedback appears durable and which file it belongs in. Before proposing, it is instructed to review the complete Markdown document, integrate the smallest coherent edit into the relevant section, remove affected-section duplication, and preserve unrelated content and structure. The `workspace_memory` tool enforces the write boundary: inferred feedback must use `propose`, and a proposal is written only after the user approves it. The observed file version must still match at write time.
+
+The npm Bundle contains both plugin halves. The Host half keeps the complete proposed replacement and performs the guarded write. The optional Web half receives only a bounded structured diff and renders the review card through DSH's client module system, so installing the Bundle does not require rebuilding the DSH Web application.
 
 This mechanism improves continuity; it does not guarantee that a model will always classify, remember, or follow every instruction correctly.
 

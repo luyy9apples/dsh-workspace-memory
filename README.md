@@ -1,6 +1,6 @@
 # dsh-workspace-memory
 
-> Shared, approval-gated workspace context for concurrent DeepSeek Harness conversations.
+> Deliberate, approval-gated `AGENTS.md` maintenance, with project facts kept separately in `.dsh-memory.md`.
 
 ![DSH Bundle](https://img.shields.io/badge/DSH-Bundle-5b5bd6.svg)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -8,12 +8,14 @@
 
 English | [简体中文](README.zh-CN.md)
 
-`dsh-workspace-memory` helps conversations working concurrently in the same workspace stay aligned on two kinds of durable context:
+DSH already uses `AGENTS.md` as a standard source of workspace instructions. `dsh-workspace-memory` adds the maintenance loop: when a reusable working rule emerges in conversation, the model can integrate it into the existing document, show a focused diff, and write it only after approval.
+
+Stable project facts and decisions are kept in `.dsh-memory.md` instead of being mixed into behavioral instructions. This keeps `AGENTS.md` focused and prevents it from growing into a catch-all memory file.
 
 | File | What belongs there |
 |---|---|
-| `AGENTS.md` | Reusable instructions for how agents should work, write, format, validate, and use tools |
-| `.dsh-memory.md` | Stable project facts, decisions, terminology, constraints, and unresolved risks |
+| `AGENTS.md` | Reusable rules for how agents should work, write, format, validate, and use tools |
+| `.dsh-memory.md` | Stable facts, decisions, terminology, constraints, and unresolved risks that agents should know but not treat as behavioral rules |
 
 Both are ordinary Markdown files in the workspace root. They remain readable, reviewable, and versionable without a database, embeddings, or a cloud service.
 
@@ -29,7 +31,7 @@ Try the same flow after installing:
 2. **Project memory:** “This project prioritizes backward compatibility over adopting new APIs. Preserve this decision for future conversations.”
 3. **New conversation:** “What instructions should you follow here, and what project decisions should you keep in mind?”
 
-Rules the agent should repeatedly follow belong in `AGENTS.md`; stable facts and decisions it should remember belong in `.dsh-memory.md`. One-off requests are not stored.
+Rules the agent should repeatedly follow belong in `AGENTS.md`; stable facts and decisions it should know belong in `.dsh-memory.md`. Keeping them separate prevents factual context from bloating the instruction file. One-off requests are not stored.
 
 ## Install
 
@@ -52,10 +54,11 @@ dsh plugin --profile web remove dsh-workspace-memory
 
 ## Why use it?
 
+- **Maintain the standard instruction file deliberately** — reusable feedback can become a precise, reviewed update to the existing `AGENTS.md`.
+- **Keep `AGENTS.md` focused** — facts and decisions go to `.dsh-memory.md` instead of accumulating as behavioral instructions.
 - **Concurrent conversations stay aligned** — already-open conversations reread the latest workspace context before their next model step.
-- **Stale updates cannot overwrite newer work** — a proposal based on an older file version is rejected if another conversation changed the file first.
-- **Instructions and knowledge stay separate** — behavioral rules go to `AGENTS.md`; project knowledge goes to `.dsh-memory.md`.
 - **No silent inferred writes** — when the model identifies durable feedback, it shows a focused diff and asks before writing.
+- **Stale updates cannot overwrite newer work** — a proposal based on an older file version is rejected if another conversation changed the file first.
 - **Purpose-built Web review** — DSH Web shows line numbers, colored additions and removals, and collapsed unchanged sections; other clients retain a Markdown fallback.
 - **Sandbox-aware** — writes use the calling session's workspace policy and cwd, not the directory where the DSH server was started.
 - **Local and inspectable** — no network requests, telemetry, database, or hidden memory store.
@@ -67,7 +70,7 @@ durable user feedback
         |
         +-- reusable agent behavior ----------> AGENTS.md
         |
-        +-- stable project knowledge ----------> .dsh-memory.md
+        +-- stable factual project context ----> .dsh-memory.md
         |
         `-- one-off request or progress --------> not stored
 
@@ -76,7 +79,9 @@ candidate -> complete-file merge -> user confirmation -> version-guarded write
 
 Before every accepted model step, the plugin injects one current snapshot of the two files. Unchanged visible content is not appended repeatedly; empty and deleted files are represented explicitly so stale content is superseded. Refresh happens before each model step; it is not real-time broadcasting, and conflicting proposals are rejected rather than merged automatically.
 
-The model decides whether feedback appears durable and which file it belongs in. Before proposing, it is instructed to review the complete Markdown document, integrate the smallest coherent edit into the relevant section, remove affected-section duplication, and preserve unrelated content and structure. The `workspace_memory` tool enforces the write boundary: inferred feedback must use `propose`, and a proposal is written only after the user approves it. The observed file version must still match at write time.
+The model decides whether durable feedback is a reusable behavior rule, factual project context, or neither. Before proposing, it is instructed to review the complete target document, integrate the smallest coherent edit into the relevant section, remove affected-section duplication, and preserve unrelated content and structure. The `workspace_memory` tool enforces the write boundary: inferred feedback must use `propose`, and a proposal is written only after the user approves it. The observed file version must still match at write time.
+
+This complements DSH's standard `agent-instructions` loader: the native plugin discovers and applies `AGENTS.md`, while `dsh-workspace-memory` provides deliberate curation of the cwd-level file and keeps factual context in its companion store.
 
 The npm Bundle contains both plugin halves. The Host half keeps the complete proposed replacement and performs the guarded write. The optional Web half receives only a bounded structured diff and renders the review card through DSH's client module system, so installing the Bundle does not require rebuilding the DSH Web application.
 

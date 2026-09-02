@@ -8,7 +8,7 @@
 
 English | [简体中文](README.zh-CN.md)
 
-DSH already uses `AGENTS.md` as a standard source of workspace instructions. `dsh-workspace-memory` adds the maintenance loop: when a reusable working rule emerges in conversation, the model can integrate it into the existing document, show a focused diff, and write it only after approval.
+`AGENTS.md` is useful only when it stays current. Reusable corrections and working agreements emerge continuously in conversations, but they are easy to leave behind in a single session. `dsh-workspace-memory` provides the missing maintenance loop: the model can integrate a durable rule into the existing document, show a focused diff, and write it only after approval.
 
 Stable project facts and decisions are kept in `.dsh-memory.md` instead of being mixed into behavioral instructions. This keeps `AGENTS.md` focused and prevents it from growing into a catch-all memory file.
 
